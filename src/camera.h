@@ -5,20 +5,23 @@
 #include "interval.h"
 #include "material.h"
 
-#include <fstream>
-
 class camera {
 	public:
 		double aspectRatio = 1.0;
 		int imageWidth = 100;
 		int samplesPerPixel = 100;
 		int maxDepth = 10;
+		double vFov = 90;
+		point3 lookFrom = point3(0, 0, 0);
+		point3 lookAt = point3(0, 0, -1);
+		vec3 vUp = vec3(0, 1, 0);
+		double defocusAngle = 0;
+		double focusDist = 10;
 
 		void render(const hittable& world) {
 			initialize();
 			std::ofstream finalFile("image.ppm");
 			finalFile << "P3\n" << imageWidth << ' ' << imageHeight << ' ' << "\n255\n";
-
 			for (int j = 0; j < imageHeight; j++) {
 				std::clog << "\rScanlines remaining: " << (imageHeight - j) << ' ' << std::flush;
 				for (int i = 0; i < imageWidth; i++) {
@@ -32,7 +35,6 @@ class camera {
 			}
 			std::clog << "\r\033[KDone.\n";
 			finalFile.close();
-
 		}
 
 	private:
@@ -42,34 +44,46 @@ class camera {
 		point3 pixel00Loc;
 		vec3 pixelDeltaU;
 		vec3 pixelDeltaV;
+		vec3 u, v, w;
+		vec3 defocusDiskU;
+		vec3 defocusDiskV;
 
 		void initialize() {
 			imageHeight = int(imageWidth / aspectRatio);
 			imageHeight = (imageHeight < 1) ? 1 : imageHeight;
 
 			pixelSamplesScale = 1.0 / samplesPerPixel;
+			
+			center = lookFrom;
 
-			center = point3(0, 0, 0);
-
-			auto focalLength = 1.0;
-			auto viewportHeight = 2.0;
+			auto theta = degreesToRadian(vFov);
+			auto h = std::tan(theta / 2);
+			auto viewportHeight = 2 * h * focusDist;
 			auto viewportWidth = viewportHeight * (double(imageWidth) / imageHeight);
 
-			auto viewportU = vec3(viewportWidth, 0, 0);
-			auto viewportV = vec3(0, -viewportHeight, 0);
+			w = unitVector(lookFrom - lookAt);
+			u = unitVector(cross(vUp, w));
+			v = cross(w, u);
+
+			auto viewportU = viewportWidth * u;
+			auto viewportV = viewportHeight * -v;
 
 			pixelDeltaU = viewportU / imageWidth;
 			pixelDeltaV = viewportV / imageHeight;
 
-			auto viewportUpperLeft = center - vec3(0, 0, focalLength) - viewportU / 2 - viewportV / 2;
+			auto viewportUpperLeft = center - (focusDist * w) - viewportU / 2 - viewportV / 2;
 			pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV);
+
+			auto defocusRadius = focusDist * std::tan(degreesToRadian(defocusAngle / 2));
+			defocusDiskU = u * defocusRadius;
+			defocusDiskV = v * defocusRadius;
 		}
 
 		ray getRay(int i, int j) const {
 			auto offset = sampleSquare();
 			auto pixelSample = pixel00Loc + ((i + offset.x()) * pixelDeltaU) + ((j + offset.y()) * pixelDeltaV);
 
-			auto rayOrigin = center;
+			auto rayOrigin = (defocusAngle <= 0) ? center : defocusDiskSample();
 			auto rayDirection = pixelSample - rayOrigin;
 
 			return ray(rayOrigin, rayDirection);
@@ -99,6 +113,12 @@ class camera {
 			auto a = 0.5 * (unitDirection.y() + 1.0);
 			return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
 		}
+
+		point3 defocusDiskSample() const {
+			auto p = randomInUnitDisk();
+			return center + (p[0] * defocusDiskU) + (p[1] * defocusDiskV);
+		}
+
 };
 
 
