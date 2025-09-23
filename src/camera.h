@@ -5,6 +5,9 @@
 #include "interval.h"
 #include "material.h"
 
+#include <thread>
+#include <sstream>
+
 class camera {
 	public:
 		double aspectRatio = 1.0;
@@ -18,19 +21,30 @@ class camera {
 		double defocusAngle = 0;
 		double focusDist = 10;
 
+
 		void render(const hittable& world) {
 			initialize();
 			std::ofstream finalFile("image.ppm");
 			finalFile << "P3\n" << imageWidth << ' ' << imageHeight << ' ' << "\n255\n";
+
+			std::clog << "\rProcessing.." << std::flush;
+			std::vector<std::vector<color>> pixels(imageHeight, std::vector<color>(imageWidth));
+
+			#pragma omp parallel for schedule(dynamic, 1)
 			for (int j = 0; j < imageHeight; j++) {
-				std::clog << "\rScanlines remaining: " << (imageHeight - j) << ' ' << std::flush;
 				for (int i = 0; i < imageWidth; i++) {
 					color pixelColor(0, 0, 0);
 					for (int sample = 0; sample < samplesPerPixel; sample++) {
 						ray r = getRay(i, j);
 						pixelColor += rayColor(r, maxDepth, world);
 					}
-					writeColor(finalFile, pixelSamplesScale * pixelColor);
+					pixels[j][i] = pixelColor;
+				}
+			}
+
+			for (int j = 0; j < imageHeight; j++) {
+				for (int i = 0; i < imageWidth; i++) {
+					writeColor(finalFile, pixelSamplesScale * pixels[j][i]);
 				}
 			}
 			std::clog << "\r\033[KDone.\n";
