@@ -6,6 +6,7 @@
 #include "material.h"
 
 #include <thread>
+#include <omp.h>
 #include <sstream>
 
 class camera {
@@ -30,7 +31,8 @@ class camera {
 			std::clog << "\rProcessing.." << std::flush;
 			std::vector<std::vector<color>> pixels(imageHeight, std::vector<color>(imageWidth));
 
-			#pragma omp parallel for schedule(dynamic, 1)
+			omp_set_num_threads(omp_get_max_threads() * 0.8);
+			#pragma omp parallel for schedule(static)
 			for (int j = 0; j < imageHeight; j++) {
 				for (int i = 0; i < imageWidth; i++) {
 					color pixelColor(0, 0, 0);
