@@ -1,6 +1,6 @@
 # Ray tracer
 
-CPU-based Mini ray tracer written in C++ with multiple material types, anti-aliasing, depth of field and customizable camera parameters and multithreading support.
+CPU-based mini ray tracer written in C++ with multiple material types, anti-aliasing, depth of field and customizable camera parameters and multithreading support.
 
 
 ## Building
