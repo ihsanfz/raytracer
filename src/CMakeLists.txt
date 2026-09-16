@@ -17,7 +17,7 @@ target_include_directories(raytracer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 enable_testing()
 
-add_executable(raytracertests tests/vec3test.cpp)
+add_executable(raytracertests tests/vec3test.cpp tests/raytest.cpp)
 
 target_include_directories(raytracertests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
